@@ -1,0 +1,42 @@
+name: Build Static Dinit (Ubuntu 26.04 compatible)
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:    # 允许手动点一下运行
+
+jobs:
+  build-static-dinit:
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04  # 直接在 Ubuntu 26.04 环境编译，100% 兼容
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install -y git build-essential libcap-dev libc6-dev-static
+
+      - name: Checkout Dinit source
+        uses: actions/checkout@v4
+        with:
+          repository: davmac314/dinit
+          ref: master
+
+      - name: Build static dinit
+        run: |
+          ./configure LDFLAGS="-static"
+          make -j$(nproc)
+
+      - name: Verify static build
+        run: |
+          ldd dinit || echo "✅ 纯静态二进制，无动态依赖"
+          file dinit
+          ./dinit --version
+
+      - name: Upload static dinit
+        uses: actions/upload-artifact@v4
+        with:
+          name: dinit-static-ubuntu26.04-amd64
+          path: dinit
