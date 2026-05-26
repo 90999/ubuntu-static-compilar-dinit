@@ -1,4 +1,4 @@
-name: Build Static Dinit (Ubuntu 26.04 static)
+name: Build Static Dinit (Official BUILD + Ubuntu 26.04)
 
 on:
   workflow_dispatch:
@@ -9,29 +9,33 @@ jobs:
     container: ubuntu:26.04
 
     steps:
-      - name: Install CA certificates & dependencies
+      - name: Install official build dependencies
         run: |
           apt update -y
-          apt install -y --no-install-recommends ca-certificates git build-essential libcap-dev libc-dev
-          update-ca-certificates
+          apt install -y --no-install-recommends \
+            ca-certificates \
+            build-essential \
+            git \
+            m4 \
+            libcap-dev
 
-      - name: Checkout code
+      - name: Checkout dinit (official repo)
         uses: actions/checkout@v4
         with:
           repository: davmac314/dinit
           ref: master
 
-      - name: Build static dinit
+      # 官方编译方式：直接 make，无需 ./configure
+      - name: Build STATIC dinit (official way)
         run: |
-          ./configure LDFLAGS="-static"
-          make -j$(nproc)
+          make LDFLAGS="-static" -j$(nproc)
 
       - name: Verify static binary
         run: |
-          ldd dinit || echo "✅ 静态编译成功"
+          ldd dinit || echo "✅ 静态编译成功（官方方式）"
           ./dinit --version
 
-      - name: Upload artifact
+      - name: Upload final static dinit
         uses: actions/upload-artifact@v4
         with:
           name: dinit-static-ubuntu26.04-amd64
