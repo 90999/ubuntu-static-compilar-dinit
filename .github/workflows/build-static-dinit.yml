@@ -5,18 +5,19 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  workflow_dispatch:    # 允许手动点一下运行
+  workflow_dispatch:
 
 jobs:
   build-static-dinit:
     runs-on: ubuntu-24.04
-    container: ubuntu:26.04  # 直接在 Ubuntu 26.04 环境编译，100% 兼容
+    container: ubuntu:26.04
 
     steps:
       - name: Install dependencies
         run: |
-          apt update
-          apt install -y git build-essential libcap-dev libc6-dev-static
+          apt update -y
+          apt install -y --no-install-recommends \
+            git build-essential libcap-dev libc-dev
 
       - name: Checkout Dinit source
         uses: actions/checkout@v4
