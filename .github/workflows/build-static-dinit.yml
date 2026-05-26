@@ -10,8 +10,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update -y
-          apt install -y --no-install-recommends \
-            build-essential git m4 libcap-dev ca-certificates
+          apt install -y --no-install-recommends build-essential git m4 libcap-dev ca-certificates
 
       - name: Checkout dinit source
         uses: actions/checkout@v4
@@ -19,61 +18,59 @@ jobs:
           repository: davmac314/dinit
           ref: master
 
-      # 官方编译：静态链接
-      - name: Build all (official way)
+      - name: Build static dinit (OFFICIAL WAY)
         run: |
           make LDFLAGS="-static" -j$(nproc)
 
-      # 创建发布目录，拷贝所有编译产物
+      # ------------ 以下是完全修复的文件打包逻辑 ------------
       - name: Prepare full package
         run: |
-          mkdir -p dinit-full/{bin,man/man8,man/man5}
-          
-          # 拷贝所有二进制
-          cp -f src/dinit dinit-full/bin/
-          cp -f src/dinitctl dinit-full/bin/
-          cp -f src/dinit-check dinit-full/bin/
-          cp -f src/dinit-monitor dinit-full/bin/
-          
-          # 拷贝所有手册页
-          cp -f doc/manpages/*.8 dinit-full/man/man8/
-          cp -f doc/manpages/*.5 dinit-full/man/man5/
-          
-          # 拷贝文档
-          cp -f README.md COPYING dinit-full/
+          # 清理并创建干净目录
+          rm -rf dinit-full
+          mkdir -p dinit-full
+          mkdir -p dinit-full/bin
+          mkdir -p dinit-full/man/man8
+          mkdir -p dinit-full/man/man5
 
-          # 生成自动安装脚本
-          cat > dinit-full/install.sh << 'EOF'
-          #!/bin/sh
-          echo "Installing static dinit (Ubuntu 26.04 compatible)..."
-          mkdir -p /usr/local/bin
-          mkdir -p /usr/local/man/man8
-          mkdir -p /usr/local/man/man5
-          cp -f bin/* /usr/local/bin/
-          cp -f man/man8/* /usr/local/man/man8/
-          cp -f man/man5/* /usr/local/man/man5/
+          # 拷贝所有二进制（官方全部 4 个工具）
+          cp -a src/dinit          dinit-full/bin/
+          cp -a src/dinitctl       dinit-full/bin/
+          cp -a src/dinit-check    dinit-full/bin/
+          cp -a src/dinit-monitor  dinit-full/bin/
+
+          # 拷贝所有手册页
+          cp -a doc/manpages/*.8   dinit-full/man/man8/
+          cp -a doc/manpages/*.5   dinit-full/man/man5/
+
+          # 拷贝文档
+          cp -a README.md COPYING  dinit-full/
+
+          # 一键安装脚本
+          cat > dinit-full/install.sh <<'EOF'
+          #!/bin/bash
+          echo "=== Installing static Dinit (Ubuntu 26.04) ==="
+          install -m 755 bin/* /usr/local/bin/
+          install -m 644 man/man8/* /usr/local/man/man8/
+          install -m 644 man/man5/* /usr/local/man/man5/
           echo "✅ Install complete!"
-          echo "Run: dinit --version"
+          echo "Try: dinit --version"
           EOF
+
           chmod +x dinit-full/install.sh
 
-      # 校验所有文件
-      - name: Verify all files
+      # 验证文件
+      - name: List all files
         run: |
-          ls -lh dinit-full/
-          ls -lh dinit-full/bin/
-          ls -lh dinit-full/man/man8/
-          ls -lh dinit-full/man/man5/
-          ldd dinit-full/bin/dinit || echo "✅ 静态二进制"
+          find dinit-full -type f | sort
 
-      # 打包整个文件夹
-      - name: Archive full package
+      # 打包整个目录
+      - name: Create archive
         run: |
-          tar -czf dinit-static-ubuntu26.04-amd64.tar.gz dinit-full/
+          tar -czf dinit-static-ubuntu26.04-amd64-full.tar.gz dinit-full/
 
       # 上传给你下载
-      - name: Upload complete package
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dinit-static-ubuntu26.04-full
-          path: dinit-static-ubuntu26.04-amd64.tar.gz
+          path: dinit-static-ubuntu26.04-amd64-full.tar.gz
