@@ -22,30 +22,27 @@ jobs:
         run: |
           make LDFLAGS="-static" -j$(nproc)
 
-      # ------------ 以下是完全修复的文件打包逻辑 ------------
       - name: Prepare full package
         run: |
-          # 清理并创建干净目录
           rm -rf dinit-full
-          mkdir -p dinit-full
           mkdir -p dinit-full/bin
           mkdir -p dinit-full/man/man8
           mkdir -p dinit-full/man/man5
 
-          # 拷贝所有二进制（官方全部 4 个工具）
+          # 拷贝所有二进制
           cp -a src/dinit          dinit-full/bin/
           cp -a src/dinitctl       dinit-full/bin/
           cp -a src/dinit-check    dinit-full/bin/
           cp -a src/dinit-monitor  dinit-full/bin/
 
-          # 拷贝所有手册页
+          # 拷贝手册页
           cp -a doc/manpages/*.8   dinit-full/man/man8/
           cp -a doc/manpages/*.5   dinit-full/man/man5/
 
-          # 拷贝文档
-          cp -a README.md COPYING  dinit-full/
+          # 拷贝文档（修复文件名！）
+          cp -a README.md LICENSE  dinit-full/
 
-          # 一键安装脚本
+          # 安装脚本
           cat > dinit-full/install.sh <<'EOF'
           #!/bin/bash
           echo "=== Installing static Dinit (Ubuntu 26.04) ==="
@@ -55,20 +52,14 @@ jobs:
           echo "✅ Install complete!"
           echo "Try: dinit --version"
           EOF
-
           chmod +x dinit-full/install.sh
 
-      # 验证文件
       - name: List all files
-        run: |
-          find dinit-full -type f | sort
+        run: find dinit-full -type f | sort
 
-      # 打包整个目录
       - name: Create archive
-        run: |
-          tar -czf dinit-static-ubuntu26.04-amd64-full.tar.gz dinit-full/
+        run: tar -czf dinit-static-ubuntu26.04-amd64-full.tar.gz dinit-full/
 
-      # 上传给你下载
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
